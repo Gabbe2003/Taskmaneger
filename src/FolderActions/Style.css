@@ -1,0 +1,8 @@
+.star-icon {
+    cursor: pointer;
+}
+
+.star-icon.favorite {
+    color: gold;
+}
+

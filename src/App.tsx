@@ -16,6 +16,7 @@ export interface Folder {
   id: string;
   name: string;
   tasks: Task[];
+  favorite?: boolean;
 }
 
 export interface State {
@@ -32,7 +33,7 @@ export interface State {
   taskStatus: "completed" | "in progress" | "pending";
   taskDueDate: string;
   search: string;
-  selectedTask: Task | null;
+  selectedTask: Task | string | null;
 }
 
 export const initialState: State = {
@@ -49,7 +50,8 @@ taskPriority: 'low',
 taskStatus: "pending",
 taskDueDate: '',
 search: '',
-selectedTask: null,
+selectedTask: '',
+
 }
 const App: React.FC = () => {
   const folderProps = FolderFunctions();

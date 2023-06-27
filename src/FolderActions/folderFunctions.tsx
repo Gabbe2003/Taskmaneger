@@ -1,9 +1,9 @@
-import React,{ useState, useReducer, } from 'react';
+import React,{ useState, useReducer } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Folder, State, Task } from '../App.tsx';
+import DOMPurify from 'dompurify';
 
 export type Action = 
-| { type: 'ADD_TASK', payload: { folder: Folder, task: Task }}
 | { type: 'ADD_FOLDER', payload: Folder }
 | { type: 'EDIT_FOLDER', payload: { original: Folder, updated: Folder } }
 | { type: 'SET_FOLDERS', payload: Folder[] }
@@ -17,14 +17,49 @@ export type Action =
 | { type: 'SET_TASK_NAME', payload: string }
 | { type: 'SET_TASK_DUE_DATE', payload: string }
 | { type: 'REMOVE_FOLDER', payload: Folder }
+| { type: 'REMOVE_ALL_FOLDERS', payload: [] }
 | { type: 'SET_TASK_STATUS', payload: 'completed' | 'in progress' | 'pending' }
 | { type: 'SET_SEARCH', payload: string }
+| { type: 'SET_SUBTASK', payload: string }
+| { type: 'TOGGLE_FAVORITE', payload: { folderId: string } }
+| { type: 'ADD_TASK', payload: { folder: Folder, task: Task }}
 | { type: 'UPDATED_TASK', payload: { original: Task, updated: Task} }
-| { type: 'SET_SUBTASK', payload: string };
+
 
 
 export const reducer = ( state: State, action: Action ) => {
   switch(action.type) {
+    case 'EDIT_TASK':
+        return {
+          ...state,
+          folders: state.folders.map((folder) =>
+            folder.id === action.payload.original.folderId
+              ? {
+                  ...folder,
+                  tasks: folder.tasks.map((task) =>
+                    task.id === action.payload.original.id ? action.payload.updated : task
+                  ),
+                }
+              : folder
+          ),
+        };
+      case 'UPDATED_TASK': {
+          console.log(action.payload.updated.name); // This will log the updated task name
+          return {
+            ...state,
+            taskName: action.payload.updated.name, // Updates the taskName in your state
+            folders: state.folders.map((folder) =>
+              folder.id === action.payload.updated.folderId
+                ? {
+                  ...folder,
+                  tasks: folder.tasks.map((task) =>
+                    task.id === action.payload.updated.id ? action.payload.updated : task
+                  ),
+                }
+                : folder
+            ),
+          };
+        }
       case 'ADD_TASK':
         return {...state,folders: state.folders.map(folder => folder.id === action.payload.folder.id ? { ...folder, tasks: [...folder.tasks, action.payload.task] } : folder)};
       case 'SET_TASK_NAME':
@@ -51,6 +86,11 @@ export const reducer = ( state: State, action: Action ) => {
         return { ...state, folderName: action.payload };
       case 'SET_SEARCH':
         return { ...state, search: action.payload };
+      case 'REMOVE_ALL_FOLDERS':
+        return {
+          ...state,
+            folders: [],
+        };
       case 'REMOVE_FOLDER':
         return {
           ...state,
@@ -63,24 +103,17 @@ export const reducer = ( state: State, action: Action ) => {
               } 
       case 'EDIT_FOLDER':
         return { ...state, folders: state.folders.map(folder => folder.id === action.payload.original.id ? action.payload.updated : folder )};
-      case 'EDIT_TASK':
+      case 'TOGGLE_FAVORITE':
         return {
           ...state,
-          folders: state.folders.map((folder) =>
-            folder.id === action.payload.original.folderId
-              ? {
-                  ...folder,
-                  tasks: folder.tasks.map((task) =>
-                    task.id === action.payload.original.id ? action.payload.updated : task
-                  ),
-                }
+          folders: state.folders.map(folder =>
+            folder.id === action.payload.folderId
+              ? { ...folder, favorite: !folder.favorite }
               : folder
-          ),
-        };
-        case 'UPDATED_TASK':
-        return {...state, payload: action.payload}
-        default:
-        return state;
+            ),
+          };
+    default:
+    return state;
     }
 }
 
@@ -96,10 +129,20 @@ export const initialState: State = {
   taskStatus: "pending",
   taskDueDate: '',
   search: '',
-  selectedTask: null,
+  selectedTask: '',
   subTask: '',
   editTask: [],
 }
+
+type TaskType = {
+  name?: string,
+  subTask?: string;
+  dueDate?: string;
+  priority?: string;
+  status?: string;
+  folderId?: string;
+  id?: string;
+};
 
 export function FolderFunctions() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -108,42 +151,73 @@ export function FolderFunctions() {
   const [openedMenu, setOpenedMenu] = useState<string | null>(null);
   const [openedFolder, setOpenedFolder] = useState<string | null>(null);
   const { taskName, taskDueDate, selectedFolder } = state;  
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
-  const [selectedTask, setSelectedTask] = useState<state | null>(null);
+  const [updatedTask] = useState<null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
+  const [showOverlay, setShowOverlay] = useState<boolean>(false);
+  const [deleteOverlay, setDeleteOverlay] = useState<boolean>(false);
+  const [selectedDeleter, setselectedDeleter] = useState<string>('');
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+  // const [selectedTask, setSelectedTask] = useState<string>('');
+  
+  // const updateTaskInCurrentFolder = (Task) => {
+  //   if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
+  //     const updatedTask = {
+  //       name: taskName,
+  //       subTask: state.subTask,
+  //       dueDate: taskDueDate,
+  //       status: state.taskStatus,
+  //       priority: state.taskPriority,
+  //       folderId: selectedFolder.id,
+  //       id: selectedFolder.id,
+  //     };
+  //     console.log(updatedTask); 
+  //     dispatch({ type: 'UPDATED_TASK', payload: Task }); 
+  //     // taskName eller updatedTask måste upptaderas på rätt sätt
+  //     setOverlayVisible(false);
+  //     return updatedTask;
+  //   } else {
+  //     alert();
+  //     return null; 
+  //   }
+  // };
 
-
-  //create a new folder
-  const handleCreateFolder = (e: React.FormEvent<HTMLFormElement>) => {
+  const updateTaskInCurrentFolder = (e) => {
     e.preventDefault();
-    if (state.folderName.trim() === '') {
-      return;
-    }
-
-    const newFolder: Folder = {
-      id: uuidv4(),
-      name: state.folderName,
-      tasks: [],
-      
-    };
-    dispatch({ type: 'ADD_FOLDER', payload: newFolder });
-    dispatch({ type: 'SET_FOLDER_NAME', payload: '' });
-    dispatch({ type: 'SET_SELECTED_FOLDER', payload: newFolder });
-  }
-
-  //change folder name
-  const handleFolderChange = (name: string) => {
-    if (selectedFolder) {
-      const updatedFolder = { ...selectedFolder, name: name };
-      handleUpdateFolder(selectedFolder, updatedFolder);
+    if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
+      const updatedTask = {
+        name: taskName,
+        id: selectedFolder.id, 
+        subTask: state.subTask,
+        dueDate: taskDueDate,
+        status: state.taskStatus,
+        priority: state.taskPriority,
+        folderId: selectedFolder.id,
+      };
+      console.log(updatedTask, updatedTask.name); 
+      dispatch({ 
+        type: 'UPDATED_TASK', 
+        payload: { 
+          original: selectedTask as Task, 
+          updated: updatedTask as Task
+        }
+      }); 
+      setIsediting(false);
+      setSelectedTask(null);
+      setOverlayVisible(false);
+      return updatedTask;
+    } else {
+      return null; 
     }
   };
 
+  
+
   //create a new task inside of the folder
   let newTask: Task | null = null;
-  const addTaskToCurrentFolder = () => {
-    if (selectedFolder && taskName.trim() !== '') {
-       newTask = {
+  const addTaskToCurrentFolder = (e) => {
+    e.preventDefault();
+    if (selectedFolder && DOMPurify.sanitize(taskName.trim()) !== '') {
+      newTask = {
         id: uuidv4(),
         name: taskName,
         subTask: state.subTask,
@@ -159,23 +233,79 @@ export function FolderFunctions() {
     }
   };
 
-  const updateTaskInCurrentFolder = (Task) => {
-    if (selectedFolder && selectedTask && taskName.trim() !== '') {
-      const updatedTask = {
-        name: taskName,
-        subTask: state.subTask,
-        dueDate: taskDueDate,
-        status: state.taskStatus,
-        priority: state.taskPriority,
-        folderId: selectedFolder.id,
-      };
-      console.log(updatedTask)
-      dispatch({ type: 'UPDATED_TASK', payload: Task })
-      setOverlayVisible(false);
+  
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (isediting) {
+      updateTaskInCurrentFolder(e);
     } else {
-      return
+      addTaskToCurrentFolder(e);
+    }
+    // Reset the form fields to their initial state
+    dispatch({ type: 'SET_TASK_NAME', payload: '' });
+    dispatch({ type: 'SET_SUBTASK', payload: '' });
+    dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
+    dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
+    dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
+  };
+  
+
+  const handleTaskDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const currentDate = new Date();
+    currentDate.setHours(0,0,0,0);
+  
+    const selectedDate = new Date(e.target.value);
+    selectedDate.setHours(0,0,0,0);
+  
+    // Always update the selected task and dispatch it
+    setSelectedTask({...selectedTask, dueDate: e.target.value}); // we keep the due date as string here
+    dispatch({type: 'SET_TASK_DUE_DATE', payload: e.target.value});
+  
+    // Only show overlay if the selected date is not in the past
+    if (selectedDate.getTime() > currentDate.getTime()) {
+      setSelectedDate(e.target.value);
+      setShowOverlay(true);
+    }
+}
+
+  const handleToggleFavorite = (folderId: string) => {
+    dispatch({ type: 'TOGGLE_FAVORITE', payload: { folderId } });
+  };
+
+  const handleRemoveFolder = (folder: Folder) => {
+    dispatch({ type: 'REMOVE_FOLDER', payload: folder });
+  };
+
+  const handleRemoveTask = (folder: Folder, task: Task) => {
+    dispatch({ type: 'REMOVE_TASK', payload: {folder, task} });
+  };
+
+  //create a new folder
+  const handleCreateFolder = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (DOMPurify.sanitize(state.folderName.trim()) === '') {
+      return;
+    }
+    const newFolder: Folder = {
+      id: uuidv4(),
+      name: state.folderName,
+      tasks: [],
+      
+    };
+    console.log(newFolder.id)
+    dispatch({ type: 'ADD_FOLDER', payload: newFolder });
+    dispatch({ type: 'SET_FOLDER_NAME', payload: '' });
+    dispatch({ type: 'SET_SELECTED_FOLDER', payload: newFolder });
+  }
+
+  //change folder name
+  const handleFolderChange = (name: string) => {
+    if (selectedFolder) {
+      const updatedFolder = { ...selectedFolder, name: name };
+      handleUpdateFolder(selectedFolder, updatedFolder);
     }
   };
+
 
   const handleViewFolder = (id: string) => {
     if (openedFolder === id) {
@@ -197,23 +327,7 @@ export function FolderFunctions() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isediting) {
-      updateTaskInCurrentFolder();
-    } else {
-      addTaskToCurrentFolder();
-    }
-    // Reset the form fields to their initial state
-    dispatch({ type: 'SET_TASK_NAME', payload: '' });
-    dispatch({ type: 'SET_SUBTASK', payload: '' });
-    dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
-    dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
-    dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
-  
-    setIsediting(false); // Exit editing mode
-  };
-  
+  // 
   const handleEditFolder = (folder: Folder) => {
     dispatch({ type: 'SET_EDITING_FOLDER', payload: folder });
     dispatch({ type: 'SET_SELECTED_FOLDER', payload: folder });
@@ -229,6 +343,7 @@ export function FolderFunctions() {
 const handleAddTask = (folder: Folder, task: Task) => {
   dispatch({ type: 'ADD_TASK', payload: { folder, task }});
 };
+
 const handleTaskNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   setSelectedTask({...selectedTask, name: e.target.value});
   dispatch({type: 'SET_TASK_NAME', payload: e.target.value});
@@ -239,11 +354,6 @@ const handlesubTaskChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
   dispatch({type: 'SET_SUBTASK', payload: e.target.value});
 };
 
-const handleTaskDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setSelectedTask({...selectedTask, dueDate: e.target.value});
-  dispatch({type: 'SET_TASK_DUE_DATE', payload: e.target.value});
-};
-
 const handleTaskPriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
   setSelectedTask({...selectedTask, priority: e.target.value as 'low' | 'medium' | 'high'});
   dispatch({type: 'SET_TASK_PRIORITY', payload: e.target.value as 'low' | 'medium' | 'high'});
@@ -252,10 +362,6 @@ const handleTaskPriorityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 const handleTaskStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
   setSelectedTask({...selectedTask, status: e.target.value as 'completed' | 'in progress' | 'pending'});
   dispatch({type: 'SET_TASK_STATUS', payload: e.target.value as 'completed' | 'in progress' | 'pending'});
-};
-
-const handleRemoveFolder = (folder: Folder) => {
-  dispatch({ type: 'REMOVE_FOLDER', payload: folder });
 };
 
 const setSelectedFolder = (folder: Folder | null) => {
@@ -269,17 +375,44 @@ const setSelectedFolder = (folder: Folder | null) => {
   const handleFolderNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({ type: 'SET_FOLDER_NAME', payload: e.target.value });
     setIsediting(false);
+    // Vad är den till för ??
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     dispatch({ type: 'SET_SEARCH', payload: e.target.value });
   };
 
+  const removeAllFolders = (e: React.MouseEvent<HTMLHeadingElement>) => {
+    console.log('selectedDeleter:', selectedDeleter);
+    const text = e.currentTarget.textContent || "";
+    if (selectedDeleter) {
+        setselectedDeleter(text);
+        setDeleteOverlay(true);
+        console.log('setDeleteOverlay has been called');
+    } else {
+        return;
+    }
+};
+
+  
+  const confirmDelete = () => {
+    dispatch({ type: 'REMOVE_ALL_FOLDERS', payload: [] });
+    setDeleteOverlay(false);
+};
+
   return {
+    handleSubmit,
+    confirmDelete,
+    setDeleteOverlay,
+    deleteOverlay,
+    handleToggleFavorite,
+    selectedDate,
+    showOverlay,
+    setShowOverlay,
+    handleRemoveTask,
     isediting,
     setIsediting,
     updateTaskInCurrentFolder,
-    handleSubmit,
     selectedTask,
     handleEditTask,
     handlesubTaskChange,
@@ -306,4 +439,4 @@ const setSelectedFolder = (folder: Folder | null) => {
     setSelectedFolder: (folder: Folder ) => dispatch({ type: 'SET_SELECTED_FOLDER', payload: folder })
   } 
 }
-export default FolderFunctions
+export default FolderFunctions;

@@ -1,0 +1,38 @@
+/* The side navigation menu */
+.sidenav {
+  height: 200%; /* 100% Full-height */
+  position: fixed; /* Stay in place */
+  z-index: 10; /* High z-index to overlap other elements */
+  top: 0; /* Stay at the top */
+  left: 0;
+  background-color: #111; /* Black*/
+  overflow-x: hidden; /* Disable horizontal scroll */
+  transition: width 0.5s ease-in-out; /* Transition effect to slide in the sidenav */
+  width: 0; /* Initial width */
+}
+
+.sidenav a {
+  text-decoration: none;
+  color: #818181;
+  transition: color 0.3s;
+}
+
+.sidenav a:hover {
+  color: #f1f1f1;
+}
+
+/* Change the style of the sidenav when opened */
+.sidenav.open {
+  width: 250px; /* Width of the sidenav when opened */
+}
+
+body.light-theme .btn {
+  background-color: rgba(160, 157, 157, 0.677);
+  /* Other light theme button styles... */
+}
+
+body.dark-theme .btn {
+  background-color: rgba(44, 44, 44, 0.756)/* dark theme button color */
+  /* Other dark theme button styles... */
+}
+
