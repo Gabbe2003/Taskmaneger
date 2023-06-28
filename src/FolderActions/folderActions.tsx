@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { FolderFunctions } from './folderFunctions.tsx';
+import { FolderFunctions } from './folderFunctions.js';
 import { Star } from 'phosphor-react';
 // import {MyComponent, menuRef } from './functionalitis.jsx';
 import './Style.css';
@@ -73,6 +73,15 @@ const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
   useEffect(() => {
     isEditingRef.current = isediting;
   }, [isediting]);
+
+  useEffect(() => {
+    console.log('selectedTask state changed', selectedTask);
+  }, [selectedTask]);
+  
+  useEffect(() => {
+    console.log('isediting state changed', isediting);
+  }, [isediting]);
+  
   
   return (
     <div className='container'>
@@ -171,9 +180,8 @@ const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
                     <div key={task.id} style={{ display: openedFolder === folder.id ? 'block' : 'none' }}>
                       <h4>{task.name || 'No Task Name Provided'}</h4>
                       <button onClick={() => {
-                        handleEditTask(task);
                         setSelectedTask(task);
-                        setIsediting(true);
+                        handleEditTask(task);
                         // console.log('folder: ', folder.tasks, 'task',task);
                       }}
                         >View task</button>

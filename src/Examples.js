@@ -1,5 +1,6 @@
 | { type: 'ADD_TASK', payload: { folder: Folder, task: Task }}
 | { type: 'UPDATED_TASK', payload: { original: Task, updated: Task} }
+| { type: 'SET_SELECTED_TASK', payload: Task | null }
 
 
 
@@ -35,6 +36,10 @@ export const reducer = ( state: State, action: Action ) => {
         ...state,
         folders: state.folders.map(folder => folder.id === action.payload.folder.id ? { ...folder, tasks: [...folder.tasks, action.payload.task] } : folder)
       };
+      case 'SET_SELECTED_TASK':
+        return { ...state, selectedTask: action.payload };
+      
+ 
           {/* Task display section */}
           {folder.tasks.map((task) => (
             <div key={task.id} style={{ display: openedFolder === folder.id ? 'block' : 'none' }}>
@@ -52,20 +57,6 @@ export const reducer = ( state: State, action: Action ) => {
                 }} >Delete</button>
             </div>
           ))}
-
-          </form >
-        </div>
-        <div className="card-footer">
-          <button className="btn btn-primary w-100"
-            onClick={(e) => { 
-            console.log('folder: ', folder);
-            setOverlayVisible(true); 
-            setSelectedFolder(folder); }}
-          >+</button>
-        </div>
-      </div>
-    </div>
-}}
 
 
 export const initialState: State = {
@@ -99,20 +90,20 @@ type TaskType = {
 const [state, dispatch] = useReducer(reducer, initialState);
   const [isediting, setIsediting] = useState<boolean | null>(null);
   const [overlayVisible, setOverlayVisible] = useState<boolean | null>(false);
-  const [openedMenu, setOpenedMenu] = useState<string | null>(null);
-  const [openedFolder, setOpenedFolder] = useState<string | null>(null);
-  const { taskName, taskDueDate, selectedFolder } = state;  
-  const [updatedTask] = useState<null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [showOverlay, setShowOverlay] = useState<boolean>(false);
-  const [deleteOverlay, setDeleteOverlay] = useState<boolean>(false);
-  const [selectedDeleter, setselectedDeleter] = useState<string>('');
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
   
 
+  const handleEditTask = (task: Task) => {
+    dispatch({ type: 'SET_SELECTED_TASK', payload: task });
+    setTimeout(() => {
+      setIsediting(true);
+      setOverlayVisible(true);
+    }, 0);
+  };
+
   const updateTaskInCurrentFolder = (e) => {
     e.preventDefault();
-    if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
+    if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '' && isediting) {
       const updatedTask = {
         name: taskName,
         id: selectedTask.id, // use the id of the selectedTask, not the folder
@@ -125,8 +116,6 @@ const [state, dispatch] = useReducer(reducer, initialState);
         console.error("selectedTask id is undefined!");
         return null;
       }
-      console.log('selectedTask:', selectedTask);
-      console.log('updatedTask:', updatedTask);
       dispatch({
         type: 'UPDATE_TASK',
         payload: {
@@ -135,6 +124,7 @@ const [state, dispatch] = useReducer(reducer, initialState);
           folderId: selectedFolder.id // Add the folderId to the payload
         }
       });
+      
       setIsediting(false);
       setSelectedTask(null);
       setOverlayVisible(false);
@@ -143,7 +133,6 @@ const [state, dispatch] = useReducer(reducer, initialState);
       return null; 
     }
   };
-
   //create a new task inside of the folder
   let newTask: Task | null = null;
   const addTaskToCurrentFolder = (e) => {
@@ -162,20 +151,4 @@ const [state, dispatch] = useReducer(reducer, initialState);
     } else {
       return newTask
     }
-  };
-
-  
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isediting) {
-      updateTaskInCurrentFolder(e);
-    } else {
-      addTaskToCurrentFolder(e);
-    }
-    // Reset the form fields to their initial state
-    dispatch({ type: 'SET_TASK_NAME', payload: '' });
-    dispatch({ type: 'SET_SUBTASK', payload: '' });
-    dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
-    dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
-    dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
   };

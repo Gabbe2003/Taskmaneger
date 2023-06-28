@@ -1,6 +1,6 @@
 import React,{ useState, useReducer } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Folder, State, Task } from '../App.tsx';
+import { Folder, State, Task } from '../App.js';
 import DOMPurify from 'dompurify';
 
 export type Action = 
@@ -24,7 +24,6 @@ export type Action =
 | { type: 'TOGGLE_FAVORITE', payload: { folderId: string } }
 | { type: 'ADD_TASK', payload: { folder: Folder, task: Task }}
 | { type: 'UPDATE_TASK'; payload: { original: Task; updated: Task; folderId: string } }
-
 
 
 export const reducer = ( state: State, action: Action ) => {
@@ -54,7 +53,7 @@ export const reducer = ( state: State, action: Action ) => {
           }
         });
         return { ...state, folders: updatedFolders };
-  case 'ADD_TASK':
+    case 'ADD_TASK':
       return {
         ...state,
         folders: state.folders.map(folder => folder.id === action.payload.folder.id ? { ...folder, tasks: [...folder.tasks, action.payload.task] } : folder)
@@ -137,12 +136,13 @@ type TaskType = {
   dueDate?: string;
   priority?: string;
   status?: string;
-  id?: string| number;
+  id?: string;
   folderId?: string | number;
 };
 
 export function FolderFunctions() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [isediting, setIsediting] = useState<boolean | null>(false);
   const [overlayVisible, setOverlayVisible] = useState<boolean | null>(false);
   const [openedMenu, setOpenedMenu] = useState<string | null>(null);
   const [openedFolder, setOpenedFolder] = useState<string | null>(null);
@@ -151,12 +151,12 @@ export function FolderFunctions() {
   const [showOverlay, setShowOverlay] = useState<boolean>(false);
   const [deleteOverlay, setDeleteOverlay] = useState<boolean>(false);
   const [selectedDeleter, setselectedDeleter] = useState<string>('');
-  const [isediting, setIsediting] = useState<boolean | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskType | null>(null);
 
   const updateTaskInCurrentFolder = (e) => {
     e.preventDefault();
-    if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
+    if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '' && isediting) {
       const updatedTask = {
         name: taskName,
         id: selectedTask.id, // use the id of the selectedTask, not the folder
@@ -169,20 +169,21 @@ export function FolderFunctions() {
         console.error("selectedTask id is undefined!");
         return null;
       }
-      console.log('selectedTask:', selectedTask);
-      console.log('updatedTask:', updatedTask);
+      console.log('this is taskname', taskName);
+      
       dispatch({
         type: 'UPDATE_TASK',
         payload: {
           original: selectedTask, // The task before updates
-          updated: updatedTask, // The task after updates
+          updated: updatedTask, // The task  updates
           folderId: selectedFolder.id // Add the folderId to the payload
         }
       });
+      
       setIsediting(false);
       setSelectedTask(null);
       setOverlayVisible(false);
-      return updatedTask;
+      // return updatedTask;
     } else {
       return null; 
     }
@@ -208,20 +209,33 @@ export function FolderFunctions() {
     }
   };
 
+  const handleEditTask = (task: Task) => {
+    dispatch({ type: 'SET_SELECTED_TASK', payload: task });
+    setTimeout(() => {
+      setIsediting(true);
+      setOverlayVisible(true);
+    }, 0);
+  };
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isediting) {
+    if (!isediting) {
       updateTaskInCurrentFolder(e);
+      dispatch({ type: 'SET_TASK_NAME', payload: '' });
+      dispatch({ type: 'SET_SUBTASK', payload: '' });
+      dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
+      dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
+      dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
     } else {
-      addTaskToCurrentFolder(e);
+      // addTaskToCurrentFolder(e);
+      return ;
     }
     // Reset the form fields to their initial state
-    dispatch({ type: 'SET_TASK_NAME', payload: '' });
-    dispatch({ type: 'SET_SUBTASK', payload: '' });
-    dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
-    dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
-    dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
+    // dispatch({ type: 'SET_TASK_NAME', payload: '' });
+    // dispatch({ type: 'SET_SUBTASK', payload: '' });
+    // dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
+    // dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
+    // dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
   };
   
 
@@ -308,11 +322,7 @@ export function FolderFunctions() {
     setIsediting(true);
   };
 
-  const handleEditTask = (task: Task) => {
-    dispatch({ type: 'SET_SELECTED_TASK', payload: task });
-    setIsediting(true);
-    setOverlayVisible(true);
-  };
+
 
 const handleAddTask = (folder: Folder, task: Task) => {
   dispatch({ type: 'ADD_TASK', payload: { folder, task }});
