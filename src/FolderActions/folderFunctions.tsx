@@ -152,7 +152,6 @@ export function FolderFunctions() {
   const [deleteOverlay, setDeleteOverlay] = useState<boolean>(false);
   const [selectedDeleter, setselectedDeleter] = useState<string>('');
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
-  const [editingTask, setEditingTask] = useState<TaskType | null>(null);
 
   const updateTaskInCurrentFolder = (e) => {
     e.preventDefault();
@@ -169,7 +168,6 @@ export function FolderFunctions() {
         console.error("selectedTask id is undefined!");
         return null;
       }
-      console.log('this is taskname', taskName);
       
       dispatch({
         type: 'UPDATE_TASK',
@@ -179,6 +177,12 @@ export function FolderFunctions() {
           folderId: selectedFolder.id // Add the folderId to the payload
         }
       });
+
+      dispatch({ type: 'SET_TASK_NAME', payload: selectedTask?.name });
+      dispatch({ type: 'SET_SUBTASK', payload: selectedTask?.subTask });
+      dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
+      dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
+      dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
       
       setIsediting(false);
       setSelectedTask(null);
@@ -221,11 +225,7 @@ export function FolderFunctions() {
     e.preventDefault();
     if (!isediting) {
       updateTaskInCurrentFolder(e);
-      dispatch({ type: 'SET_TASK_NAME', payload: '' });
-      dispatch({ type: 'SET_SUBTASK', payload: '' });
-      dispatch({ type: 'SET_TASK_DUE_DATE', payload: '' });
-      dispatch({ type: 'SET_TASK_STATUS', payload: 'pending' });
-      dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
+      
     } else {
       // addTaskToCurrentFolder(e);
       return ;
@@ -238,7 +238,6 @@ export function FolderFunctions() {
     // dispatch({ type: 'SET_TASK_PRIORITY', payload: 'low' });
   };
   
-
   const handleTaskDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const currentDate = new Date();
     currentDate.setHours(0,0,0,0);
@@ -294,7 +293,6 @@ export function FolderFunctions() {
     }
   };
 
-
   const handleViewFolder = (id: string) => {
     if (openedFolder === id) {
       setOpenedFolder(null); 
@@ -315,14 +313,11 @@ export function FolderFunctions() {
     }
   };
 
-  // 
   const handleEditFolder = (folder: Folder) => {
     dispatch({ type: 'SET_EDITING_FOLDER', payload: folder });
     dispatch({ type: 'SET_SELECTED_FOLDER', payload: folder });
     setIsediting(true);
   };
-
-
 
 const handleAddTask = (folder: Folder, task: Task) => {
   dispatch({ type: 'ADD_TASK', payload: { folder, task }});
@@ -350,6 +345,7 @@ const handleTaskStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 
 const setSelectedFolder = (folder: Folder | null) => {
   dispatch({ type: 'SET_SELECTED_FOLDER', payload: folder });
+ 
 }
 
   const handleUpdateFolder = (original: Folder, updated: Folder) => {
@@ -376,7 +372,6 @@ const setSelectedFolder = (folder: Folder | null) => {
     }
 };
 
-  
   const confirmDelete = () => {
     dispatch({ type: 'REMOVE_ALL_FOLDERS', payload: [] });
     setDeleteOverlay(false);
