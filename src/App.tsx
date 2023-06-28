@@ -9,7 +9,6 @@ export interface Task {
   priority: 'low' | 'medium' | 'high';
   status: "completed" | "in progress" | "pending";
   dueDate: string;
-  folderId: string;
 }
 
 export interface Folder {
@@ -17,6 +16,7 @@ export interface Folder {
   name: string;
   tasks: Task[];
   favorite?: boolean;
+  folderId?: number | string;
 }
 
 export interface State {

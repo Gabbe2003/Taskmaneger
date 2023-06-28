@@ -23,45 +23,42 @@ export type Action =
 | { type: 'SET_SUBTASK', payload: string }
 | { type: 'TOGGLE_FAVORITE', payload: { folderId: string } }
 | { type: 'ADD_TASK', payload: { folder: Folder, task: Task }}
-| { type: 'UPDATED_TASK', payload: { original: Task, updated: Task} }
+| { type: 'UPDATE_TASK'; payload: { original: Task; updated: Task; folderId: string } }
 
 
 
 export const reducer = ( state: State, action: Action ) => {
   switch(action.type) {
     case 'EDIT_TASK':
-        return {
-          ...state,
-          folders: state.folders.map((folder) =>
-            folder.id === action.payload.original.folderId
-              ? {
-                  ...folder,
-                  tasks: folder.tasks.map((task) =>
-                    task.id === action.payload.original.id ? action.payload.updated : task
-                  ),
-                }
-              : folder
+      return {
+        ...state,
+        folders: state.folders.map((folder) =>
+        ({
+          ...folder,
+          tasks: folder.tasks.map((task) =>
+            task.id === action.payload.original.id ? action.payload.updated : task
           ),
-        };
-      case 'UPDATED_TASK': {
-          console.log(action.payload.updated.name); // This will log the updated task name
-          return {
-            ...state,
-            taskName: action.payload.updated.name, // Updates the taskName in your state
-            folders: state.folders.map((folder) =>
-              folder.id === action.payload.updated.folderId
-                ? {
-                  ...folder,
-                  tasks: folder.tasks.map((task) =>
-                    task.id === action.payload.updated.id ? action.payload.updated : task
-                  ),
-                }
-                : folder
-            ),
-          };
-        }
-      case 'ADD_TASK':
-        return {...state,folders: state.folders.map(folder => folder.id === action.payload.folder.id ? { ...folder, tasks: [...folder.tasks, action.payload.task] } : folder)};
+        }))
+      };
+      case 'UPDATE_TASK':
+        const updatedFolders = state.folders.map((folder) => {
+          if (folder.id === action.payload.folderId) {  // Make sure we're only updating the correct folder
+            return {
+              ...folder,
+              tasks: folder.tasks.map((task) =>
+                task.id === action.payload.original.id ? action.payload.updated : task
+              ),
+            };
+          } else {
+            return folder;
+          }
+        });
+        return { ...state, folders: updatedFolders };
+  case 'ADD_TASK':
+      return {
+        ...state,
+        folders: state.folders.map(folder => folder.id === action.payload.folder.id ? { ...folder, tasks: [...folder.tasks, action.payload.task] } : folder)
+      };
       case 'SET_TASK_NAME':
         return { ...state, taskName: action.payload };
       case 'SET_SUBTASK':
@@ -129,7 +126,7 @@ export const initialState: State = {
   taskStatus: "pending",
   taskDueDate: '',
   search: '',
-  selectedTask: '',
+  selectedTask: null,
   subTask: '',
   editTask: [],
 }
@@ -140,67 +137,48 @@ type TaskType = {
   dueDate?: string;
   priority?: string;
   status?: string;
-  folderId?: string;
-  id?: string;
+  id?: string| number;
+  folderId?: string | number;
 };
 
 export function FolderFunctions() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [isediting, setIsediting] = useState<boolean | null>(null);
   const [overlayVisible, setOverlayVisible] = useState<boolean | null>(false);
   const [openedMenu, setOpenedMenu] = useState<string | null>(null);
   const [openedFolder, setOpenedFolder] = useState<string | null>(null);
   const { taskName, taskDueDate, selectedFolder } = state;  
-  const [updatedTask] = useState<null>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [showOverlay, setShowOverlay] = useState<boolean>(false);
   const [deleteOverlay, setDeleteOverlay] = useState<boolean>(false);
   const [selectedDeleter, setselectedDeleter] = useState<string>('');
+  const [isediting, setIsediting] = useState<boolean | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
-  // const [selectedTask, setSelectedTask] = useState<string>('');
-  
-  // const updateTaskInCurrentFolder = (Task) => {
-  //   if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
-  //     const updatedTask = {
-  //       name: taskName,
-  //       subTask: state.subTask,
-  //       dueDate: taskDueDate,
-  //       status: state.taskStatus,
-  //       priority: state.taskPriority,
-  //       folderId: selectedFolder.id,
-  //       id: selectedFolder.id,
-  //     };
-  //     console.log(updatedTask); 
-  //     dispatch({ type: 'UPDATED_TASK', payload: Task }); 
-  //     // taskName eller updatedTask måste upptaderas på rätt sätt
-  //     setOverlayVisible(false);
-  //     return updatedTask;
-  //   } else {
-  //     alert();
-  //     return null; 
-  //   }
-  // };
 
   const updateTaskInCurrentFolder = (e) => {
     e.preventDefault();
     if (selectedFolder && selectedTask && DOMPurify.sanitize(taskName.trim()) !== '') {
       const updatedTask = {
         name: taskName,
-        id: selectedFolder.id, 
+        id: selectedTask.id, // use the id of the selectedTask, not the folder
         subTask: state.subTask,
         dueDate: taskDueDate,
         status: state.taskStatus,
         priority: state.taskPriority,
-        folderId: selectedFolder.id,
       };
-      console.log(updatedTask, updatedTask.name); 
-      dispatch({ 
-        type: 'UPDATED_TASK', 
-        payload: { 
-          original: selectedTask as Task, 
-          updated: updatedTask as Task
+      if(!selectedTask.id) {
+        console.error("selectedTask id is undefined!");
+        return null;
+      }
+      console.log('selectedTask:', selectedTask);
+      console.log('updatedTask:', updatedTask);
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          original: selectedTask, // The task before updates
+          updated: updatedTask, // The task after updates
+          folderId: selectedFolder.id // Add the folderId to the payload
         }
-      }); 
+      });
       setIsediting(false);
       setSelectedTask(null);
       setOverlayVisible(false);
@@ -209,8 +187,6 @@ export function FolderFunctions() {
       return null; 
     }
   };
-
-  
 
   //create a new task inside of the folder
   let newTask: Task | null = null;
@@ -224,7 +200,6 @@ export function FolderFunctions() {
         dueDate: taskDueDate,
         status: state.taskStatus,
         priority: state.taskPriority,
-        folderId: selectedFolder.id,
       };
       handleAddTask(selectedFolder, newTask);
       setOverlayVisible(false);
@@ -292,7 +267,6 @@ export function FolderFunctions() {
       tasks: [],
       
     };
-    console.log(newFolder.id)
     dispatch({ type: 'ADD_FOLDER', payload: newFolder });
     dispatch({ type: 'SET_FOLDER_NAME', payload: '' });
     dispatch({ type: 'SET_SELECTED_FOLDER', payload: newFolder });
@@ -383,12 +357,10 @@ const setSelectedFolder = (folder: Folder | null) => {
   };
 
   const removeAllFolders = (e: React.MouseEvent<HTMLHeadingElement>) => {
-    console.log('selectedDeleter:', selectedDeleter);
     const text = e.currentTarget.textContent || "";
     if (selectedDeleter) {
         setselectedDeleter(text);
         setDeleteOverlay(true);
-        console.log('setDeleteOverlay has been called');
     } else {
         return;
     }
@@ -401,6 +373,7 @@ const setSelectedFolder = (folder: Folder | null) => {
 };
 
   return {
+    setSelectedTask,
     handleSubmit,
     confirmDelete,
     setDeleteOverlay,

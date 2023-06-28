@@ -9,6 +9,7 @@ type FolderActionsProps = ReturnType<typeof FolderFunctions>;
 const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
 
   const {
+    setSelectedTask,
     handleSubmit,
     confirmDelete,
     setDeleteOverlay,
@@ -63,7 +64,7 @@ const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [openedMenu]);
+  }, [setOpenedMenu]);
   
   const { selectedFolder } = state;
 
@@ -171,6 +172,7 @@ const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
                       <h4>{task.name || 'No Task Name Provided'}</h4>
                       <button onClick={() => {
                         handleEditTask(task);
+                        setSelectedTask(task);
                         setIsediting(true);
                         // console.log('folder: ', folder.tasks, 'task',task);
                       }}
@@ -178,17 +180,14 @@ const FolderActions: React.FC<FolderActionsProps> = (props, ) => {
                         <button onClick={() =>{
                           handleRemoveTask(folder,task);
                           setIsediting(false);
-                          console.log('folder: ', folder.tasks, 'task',task);
                         }} >Delete</button>
                     </div>
                   ))}
-
                   </form >
                 </div>
                 <div className="card-footer">
                   <button className="btn btn-primary w-100"
                     onClick={(e) => { 
-                    console.log('folder: ', folder);
                     setOverlayVisible(true); 
                     setSelectedFolder(folder); }}
                   >+</button>
